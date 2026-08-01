@@ -1,0 +1,36 @@
+RSR SHOP V6 — SUPABASE SETUP
+
+1. Create a Supabase project.
+2. Open SQL Editor and run supabase-schema.sql once.
+3. In Supabase Authentication:
+   - Enable Email provider.
+   - Keep Confirm email enabled.
+   - Set Site URL to your Render URL.
+   - Add Redirect URLs:
+     https://YOUR-DOMAIN.onrender.com/auth.html
+     https://YOUR-DOMAIN.onrender.com/reset-password.html
+4. In Render Environment Variables add:
+   SUPABASE_URL
+   SUPABASE_PUBLISHABLE_KEY
+   SUPABASE_SECRET_KEY
+   PUBLIC_BASE_URL
+   ADMIN_KEY
+   DISCORD_WEBHOOK_URL
+5. Do not upload .env.
+6. Upload this project's files to GitHub and deploy the latest commit.
+
+IMPORTANT:
+- SUPABASE_SECRET_KEY (or legacy service_role key) must ONLY exist on Render/server.
+- The browser receives only the publishable key on the password-reset page.
+- The payment-receipts bucket is private. Admin receipt links expire after one hour.
+- Stock reservations default to 60 minutes.
+- To automatically release expired reservations every five minutes, enable Supabase Cron and run the optional cron line at the bottom of supabase-schema.sql.
+
+
+V7 ADDITIONAL SETUP
+- The same supabase-schema.sql now also creates:
+  promo_codes
+  admin_presence
+  sales_analytics view
+- Admin can create promo codes from /admin.html.
+- Admin can show Support Online/Offline from /admin.html.

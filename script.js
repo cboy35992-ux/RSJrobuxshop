@@ -1,0 +1,4 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reset Password | RSR</title><link rel="stylesheet" href="style.css"></head>
+<body class="auth-body"><main class="auth-shell single-auth"><section class="auth-card"><h1>Choose a new password</h1><p class="hint">Open this page from the password-reset email.</p>
+<form id="resetForm"><div class="form-group"><label>New Password</label><input id="newPassword" type="password" minlength="8" required></div><div class="form-group"><label>Confirm Password</label><input id="confirmPassword" type="password" minlength="8" required></div><button class="primary-button">Update Password</button></form><p id="resetMessage" class="message"></p></section></main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="reset-password.js"></script></body></html>

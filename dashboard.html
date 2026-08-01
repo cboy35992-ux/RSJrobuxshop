@@ -1,0 +1,4 @@
+"use strict";const $=id=>document.getElementById(id);let client;
+async function init(){const c=await fetch("/api/public-config").then(r=>r.json());client=supabase.createClient(c.supabaseUrl,c.supabasePublishableKey);const hash=new URLSearchParams(location.hash.slice(1));if(hash.get("access_token")&&hash.get("refresh_token"))await client.auth.setSession({access_token:hash.get("access_token"),refresh_token:hash.get("refresh_token")});}
+$("resetForm").onsubmit=async e=>{e.preventDefault();const p=$("newPassword").value;if(p!==$("confirmPassword").value){$("resetMessage").textContent="Passwords do not match.";$("resetMessage").className="message error";return;}const {error}=await client.auth.updateUser({password:p});$("resetMessage").textContent=error?error.message:"Password updated. Return to login.";$("resetMessage").className=`message ${error?"error":"success"}`;};
+init();
