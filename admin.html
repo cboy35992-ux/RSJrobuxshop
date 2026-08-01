@@ -1,221 +1,133 @@
-"use strict";
-const $ = id => document.getElementById(id);
-const methodButtons = document.querySelectorAll(".method-card");
-const taxInputs = document.querySelectorAll('input[name="taxOption"]');
-const paymentInputs = document.querySelectorAll('input[name="paymentMethod"]');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reck Shop Robux | RSR</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="navbar">
+  <a class="brand" href="/"><span class="brand-logo">R</span><span><strong>RECK SHOP</strong><small>RSR</small></span></a>
+  <nav><a href="#recentTransactions">My Orders</a><a href="status.html">Track Order</a><button id="helpButton" class="nav-button">Contact Help</button><button id="accountButton" class="account-button"><span id="accountInitial">U</span><span id="accountName">Account</span></button></nav>
+</header>
 
-let selectedMethod = "gamepass";
-let selectedRobloxUser = null;
-let instantStock = 50000;
-let appliedPromo = null;
-let basePaymentBeforeDiscount = 0;
+<main>
+<section class="hero">
+  <span class="hero-badge">⚡ Fast Digital Orders</span>
+  <h1>Choose Your <span>Robux Method</span></h1>
+  <p>Find your Roblox account, choose a method, pay through QR, and submit your receipt.</p>
+</section>
 
-let currentAccount=null;
-async function requireAccount(){
-  const r=await fetch("/api/auth/me");
-  if(!r.ok){location.href="/auth.html";throw new Error("Login required.");}
-  const d=await r.json();
-  currentAccount=d.user;
-  $("accountName").textContent=currentAccount.name.split(" ")[0];
-  $("accountInitial").textContent=currentAccount.name.charAt(0).toUpperCase();
-  $("menuName").textContent=currentAccount.name;
-  $("menuEmail").textContent=currentAccount.email;
-  await loadTransactions();
-}
-function transactionStatusClass(status){return String(status||"").toLowerCase().replaceAll(" ","-");}
-async function loadTransactions(){
-  const box=$("transactionsList");
-  try{
-    const r=await fetch("/api/account/orders");
-    if(r.status===401){location.href="/auth.html";return;}
-    const orders=await r.json();
-    if(!orders.length){box.innerHTML='<div class="empty-state"><span>🧾</span><h3>No transactions yet</h3><p>Your completed order submissions will appear here.</p></div>';return;}
-    box.innerHTML=orders.slice(0,10).map(o=>`<article class="transaction-item">
-      <div class="transaction-icon">${o.method==="In-Game Gifting"?"🎁":o.method==="Robux Instant"?"⚡":"🎟️"}</div>
-      <div class="transaction-main"><strong>${escapeHtml(o.method)}${o.taxOption&&o.taxOption!=="N/A"?" — "+escapeHtml(o.taxOption):""}</strong><span>${escapeHtml(o.orderNumber)} • ${new Date(o.createdAt).toLocaleString()}</span></div>
-      <div class="transaction-amount"><strong>₱${Number(o.payment||0).toFixed(2)}</strong><span>${Number(o.amount||0).toLocaleString()} Robux</span></div>
-      <span class="transaction-status ${transactionStatusClass(o.status)}">${escapeHtml(o.status)}</span>
-      <a class="transaction-link" href="${o.chatUrl}">View</a>
-    </article>`).join("");
-  }catch(e){box.innerHTML=`<p class="message error">${escapeHtml(e.message)}</p>`;}
-}
-function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+<section class="shop-section">
+  <div class="section-title"><span class="step-number">1</span><div><h2>Choose Purchase Method</h2><p>Gamepass, Instant, or In-Game Gifting.</p></div></div>
+  <div class="method-grid">
+    <button class="method-card active" data-method="gamepass"><span class="method-icon">🎟️</span><h3>Gamepass</h3><p>Choose covered or not-covered tax.</p><strong>CT ₱428.70 • NCT ₱300 / 1,000</strong></button>
+    <button class="method-card" data-method="instant"><span class="method-icon">⚡</span><span class="stock-badge">Stock: <b id="instantStockCard">50,000</b></span><h3>Robux Instant</h3><p>Eligible instant-transfer order. Minimum order: 10 Robux.</p><strong>₱450 / 1,000 Robux</strong></button>
+    <button class="method-card" data-method="gifting"><span class="method-icon">🎁</span><h3>In-Game Gifting</h3><p>Request an eligible item inside a game.</p><strong>₱300 / 1,000 Robux</strong></button>
+  </div>
 
+  <section class="panel">
+    <div class="panel-heading"><div><span class="small-label">ORDER INFORMATION</span><h2>Create Your Order</h2></div><span id="selectedMethodBadge" class="selected-badge">Gamepass — Covered Tax</span></div>
 
-const methodNames = {gamepass:"Gamepass", instant:"Robux Instant", gifting:"In-Game Gifting"};
-const rates = {instant:450, gifting:300};
-const qr = {
-  "GCash": {src:"./images/gcash-qr.png", title:"Pay through GCash"},
-  "GoTyme Bank": {src:"./images/gotyme-qr.png", title:"Pay through GoTyme Bank"}
-};
-const peso = n => new Intl.NumberFormat("en-PH",{style:"currency",currency:"PHP",minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
-const num = n => Number(n).toLocaleString("en-US");
+    <div class="form-group">
+      <label for="username">Roblox Username</label>
+      <div class="search-row"><input id="username" type="text" placeholder="Enter exact Roblox username" maxlength="20" autocomplete="off"><button id="searchUserButton" type="button">Find Account</button></div>
+      <div id="robloxLoading" class="hint hidden">Searching Roblox…</div>
+      <div id="robloxResult" class="roblox-result hidden">
+        <img id="robloxAvatar" alt="Roblox avatar">
+        <div><strong id="robloxDisplayName"></strong><p id="robloxUserName"></p><small id="robloxUserId"></small></div>
+        <span class="verified-pill">Selected</span>
+      </div>
+      <p id="robloxError" class="message error hidden"></p>
+      <small>Never enter your Roblox password.</small>
+    </div>
 
-function selectedTax(){ return document.querySelector('input[name="taxOption"]:checked')?.value || "covered"; }
-function selectedPayment(){ return document.querySelector('input[name="paymentMethod"]:checked')?.value || "GCash"; }
-function currentRate(){ return selectedMethod==="gamepass" ? (selectedTax()==="covered" ? 428.7 : 300) : rates[selectedMethod]; }
-function displayMethod(){ return selectedMethod==="gamepass" ? `Gamepass — ${selectedTax()==="covered" ? "Covered Tax" : "Not Covered Tax"}` : methodNames[selectedMethod]; }
+    <div id="gamepassOptions" class="form-group">
+      <label>Gamepass Tax Option</label>
+      <div class="tax-options">
+        <label class="tax-card active"><input type="radio" name="taxOption" value="covered" checked><span><strong>Covered Tax (CT)</strong><small>Receive the full amount. ₱428.70 / 1,000.</small></span></label>
+        <label class="tax-card"><input type="radio" name="taxOption" value="not-covered"><span><strong>Not Covered Tax (NCT)</strong><small>Receive approximately 70%. ₱300 / 1,000.</small></span></label>
+      </div>
+    </div>
 
-function calc(){
-  const amount = Number($("robuxAmount").value) || 0;
-  let receive=0, pass=0;
-  if(selectedMethod==="gamepass"){
-    if(selectedTax()==="covered"){ receive=Math.floor(amount); pass=Math.ceil(amount/0.7); }
-    else { pass=Math.floor(amount); receive=Math.floor(amount*0.7); }
-  } else { receive=Math.floor(amount); }
-  basePaymentBeforeDiscount=(amount/1000)*currentRate();
-  const discount=appliedPromo ? basePaymentBeforeDiscount*(Number(appliedPromo.discountPercent)/100) : 0;
-  const payment=Math.max(0,basePaymentBeforeDiscount-discount);
-  $("receiveAmount").textContent=`${num(receive)} Robux`;
-  $("passPrice").textContent=`${num(pass)} Robux`;
-  $("paymentTotal").textContent=peso(payment);
-  $("paymentAmountDisplay").textContent=peso(payment);
-  return {amount, receive, pass, payment, originalPayment:basePaymentBeforeDiscount, discount};
-}
-async function loadHomeExtras(){
-  try{
-    const [nr,rr,sr]=await Promise.all([fetch("/api/account/unread-count"),fetch("/api/reviews/public"),fetch("/api/support-status")]);
-    if(nr.ok){const n=await nr.json();$("navUnreadBadge").textContent=n.count;$("navUnreadBadge").classList.toggle("hidden",!n.count);}
-    if(sr.ok){const s=await sr.json();$("supportIndicator").textContent=s.isOnline?"● Support Online":"● Support Offline";$("supportIndicator").classList.toggle("online",s.isOnline);$("supportIndicator").classList.toggle("offline",!s.isOnline);$("supportIndicator").title=s.statusText||"";}
-    if(rr.ok){const d=await rr.json();$("averageRating").textContent=d.count?`${d.average.toFixed(1)} ★ (${d.count})`:"New";$("reviewsList").innerHTML=d.reviews.map(r=>`<article class="review-card"><div><strong>${"★".repeat(r.rating)}${"☆".repeat(5-r.rating)}</strong><span>Verified purchase</span></div><p>${escapeHtml(r.comment)}</p><small>${escapeHtml(r.customer_name)} • ${new Date(r.created_at).toLocaleDateString()}</small></article>`).join("")||'<p class="hint">No reviews yet.</p>';}
-  }catch(e){}
-}
-function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-async function loadPublicSettings(){
-  try{
-    const r=await fetch("/api/settings");
-    const d=await r.json();
-    if(r.ok){
-      instantStock=Number(d.instantStock)||0;
-      $("instantStockCard").textContent=num(instantStock);
-      $("instantStockSummary").textContent=`${num(instantStock)} Robux`;
-    }
-  }catch(e){ console.warn("Could not load stock."); }
-}
-function refreshMethod(){
-  methodButtons.forEach(b=>b.classList.toggle("active",b.dataset.method===selectedMethod));
-  $("selectedMethod").textContent=displayMethod();
-  $("selectedMethodBadge").textContent=displayMethod();
-  $("gamepassOptions").classList.toggle("hidden",selectedMethod!=="gamepass");
-  $("giftingOptions").classList.toggle("hidden",selectedMethod!=="gifting");
-  $("passPriceRow").classList.toggle("hidden",selectedMethod!=="gamepass");
-  $("amountLabel").textContent=selectedMethod==="gifting" ? "Item Robux Price" : "Robux Amount";
-  $("amountHelp").textContent=selectedMethod==="instant" ? `Minimum: 10 Robux • Available stock: ${num(instantStock)} Robux` : (selectedMethod==="gifting" ? "Enter the Robux price of the item." : "Enter the amount you want to order.");
-  $("robuxAmount").min=selectedMethod==="instant" ? "10" : "1";
-  $("stockSummaryRow").classList.toggle("hidden",selectedMethod!=="instant");
-  $("currentRate").textContent=`₱${currentRate().toLocaleString("en-PH",{minimumFractionDigits:2,maximumFractionDigits:2})} / 1,000`;
-  calc();
-}
-function refreshTax(){
-  document.querySelectorAll(".tax-card").forEach(c=>c.classList.toggle("active",c.querySelector("input").checked));
-  refreshMethod();
-}
-function refreshPayment(){
-  document.querySelectorAll(".payment-card").forEach(c=>c.classList.toggle("active",c.querySelector("input").checked));
-  const d=qr[selectedPayment()]; $("paymentQr").src=d.src; $("paymentTitle").textContent=d.title;
-}
-function showError(message){ const m=$("submitMessage"); m.className="message error"; m.textContent=message; }
+    <div id="giftingOptions" class="gifting-fields hidden">
+      <div class="form-group"><label for="gameName">Roblox Game</label><input id="gameName" type="text" placeholder="Example: Adopt Me"></div>
+      <div class="form-group"><label for="itemName">Exact Item Name</label><input id="itemName" type="text" placeholder="Enter the item name"></div>
+      <div class="form-group full-width"><label for="giftDetails">Gifting Details</label><textarea id="giftDetails" rows="3" placeholder="Add item link, preferred schedule, server details, or other information."></textarea></div>
+    </div>
 
-async function findRobloxUser(){
-  const username=$("username").value.trim();
-  selectedRobloxUser=null;
-  $("robloxResult").classList.add("hidden");
-  $("robloxError").classList.add("hidden");
-  if(username.length<3){ $("robloxError").textContent="Enter an exact Roblox username."; $("robloxError").classList.remove("hidden"); return; }
-  $("robloxLoading").classList.remove("hidden");
-  $("searchUserButton").disabled=true;
-  try{
-    const r=await fetch(`/api/roblox/search?username=${encodeURIComponent(username)}`);
-    const d=await r.json();
-    if(!r.ok) throw new Error(d.error||"Account not found.");
-    selectedRobloxUser=d;
-    $("robloxAvatar").src=d.avatarUrl;
-    $("robloxDisplayName").textContent=d.displayName;
-    $("robloxUserName").textContent=`@${d.username}`;
-    $("robloxUserId").textContent=`User ID: ${d.userId}`;
-    $("robloxResult").classList.remove("hidden");
-    $("username").value=d.username;
-  }catch(e){
-    $("robloxError").textContent=e.message;
-    $("robloxError").classList.remove("hidden");
-  }finally{
-    $("robloxLoading").classList.add("hidden");
-    $("searchUserButton").disabled=false;
-  }
-}
+    <div class="form-group"><label id="amountLabel" for="robuxAmount">Robux Amount</label><input id="robuxAmount" type="number" min="1" step="1" placeholder="Example: 1000"><small id="amountHelp">Enter the amount you want to order.</small></div>
+    <div class="quick-amounts"><button data-amount="100">100</button><button data-amount="500">500</button><button data-amount="1000">1,000</button><button data-amount="5000">5,000</button><button data-amount="10000">10,000</button></div>
 
-methodButtons.forEach(b=>b.onclick=()=>{selectedMethod=b.dataset.method;refreshMethod();});
-taxInputs.forEach(i=>i.onchange=refreshTax);
-paymentInputs.forEach(i=>i.onchange=refreshPayment);
-document.querySelectorAll(".quick-amounts button").forEach(b=>b.onclick=()=>{$("robuxAmount").value=b.dataset.amount;calc();});
-$("robuxAmount").oninput=calc;
-$("searchUserButton").onclick=findRobloxUser;
-$("username").addEventListener("input",()=>{selectedRobloxUser=null;$("robloxResult").classList.add("hidden");});
-$("username").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();findRobloxUser();}});
-$("paymentQr").onerror=()=>{$("paymentTitle").textContent="QR image not found. Check public/images.";};
+    <div class="calculation-box">
+      <div><span>Selected Method</span><strong id="selectedMethod">Gamepass — Covered Tax</strong></div>
+      <div><span>Customer Receives</span><strong id="receiveAmount">0 Robux</strong></div>
+      <div id="passPriceRow"><span>Required Gamepass Price</span><strong id="passPrice">0 Robux</strong></div>
+      <div><span>Current Rate</span><strong id="currentRate">₱428.70 / 1,000</strong></div><div id="stockSummaryRow" class="hidden"><span>Available Instant Stock</span><strong id="instantStockSummary">50,000 Robux</strong></div>
+      <div class="total-row"><span>Total Payment</span><strong id="paymentTotal">₱0.00</strong></div>
+    </div>
+  </section>
 
-$("placeOrderButton").onclick=async()=>{
-  const msg=$("submitMessage"); msg.className="message"; msg.textContent="";
-  const username=$("username").value.trim(), sender=$("senderName").value.trim(), ref=$("referenceNumber").value.trim(), receipt=$("paymentReceipt").files[0], c=calc();
-  if(!selectedRobloxUser || selectedRobloxUser.username.toLowerCase()!==username.toLowerCase()) return showError("Find and confirm the Roblox account first.");
-  if(c.amount<=0) return showError("Enter a valid Robux amount.");
-  if(selectedMethod==="instant" && c.amount<10) return showError("Robux Instant has a minimum order of 10 Robux.");
-  if(selectedMethod==="instant" && c.amount>instantStock) return showError(`Only ${num(instantStock)} Robux Instant stock is available.`);
-  let gameName="",itemName="",giftDetails="";
-  if(selectedMethod==="gifting"){
-    gameName=$("gameName").value.trim(); itemName=$("itemName").value.trim(); giftDetails=$("giftDetails").value.trim();
-    if(!gameName||!itemName) return showError("Enter the game and exact item name.");
-  }
-  if(!sender||ref.length<5) return showError("Enter sender name and a valid reference number.");
-  if(!receipt) return showError("Upload the payment receipt.");
-  if(!["image/png","image/jpeg"].includes(receipt.type)||receipt.size>5*1024*1024) return showError("Receipt must be PNG/JPG and under 5 MB.");
-  if(!$("confirmInformation").checked) return showError("Confirm that all information is correct.");
+  <section class="panel">
+    <div class="section-title"><span class="step-number">2</span><div><h2>Select Payment Method</h2><p>Choose GCash or GoTyme, then scan the QR.</p></div></div>
+    <div class="payment-methods">
+      <label class="payment-card active"><input type="radio" name="paymentMethod" value="GCash" checked><span class="payment-logo gcash-logo">GCash</span><span><strong>GCash</strong><small>GCash or InstaPay</small></span></label>
+      <label class="payment-card"><input type="radio" name="paymentMethod" value="GoTyme Bank"><span class="payment-logo gotyme-logo">GoTyme</span><span><strong>GoTyme Bank</strong><small>GoTyme or InstaPay</small></span></label>
+    </div>
+    <div class="qr-panel">
+      <div class="qr-wrapper"><img id="paymentQr" src="./images/gcash-qr.png" alt="GCash payment QR"></div>
+      <div><h3 id="paymentTitle">Pay through GCash</h3><ol><li>Open your payment app.</li><li>Scan the QR code.</li><li>Pay the exact amount.</li><li>Save your receipt.</li><li>Upload it below.</li></ol><div class="amount-to-pay"><span>Exact Amount</span><strong id="paymentAmountDisplay">₱0.00</strong></div></div>
+    </div>
+    <div class="payment-proof">
+      <div class="form-group"><label for="senderName">Sender Name</label><input id="senderName" type="text" placeholder="Name used for payment"></div>
+      <div class="form-group"><label for="referenceNumber">Reference Number</label><input id="referenceNumber" type="text" placeholder="Payment reference number"></div>
+      <div class="form-group full-width"><label for="paymentReceipt">Payment Receipt</label><input id="paymentReceipt" type="file" accept="image/png,image/jpeg"></div>
+    </div>
+  </section>
 
-  const fd=new FormData();
-  fd.append("username",selectedRobloxUser.username);
-  fd.append("robloxUserId",selectedRobloxUser.userId);
-  fd.append("robloxDisplayName",selectedRobloxUser.displayName);
-  fd.append("robloxAvatarUrl",selectedRobloxUser.avatarUrl);
-  fd.append("method",methodNames[selectedMethod]);
-  fd.append("taxOption",selectedMethod==="gamepass"?(selectedTax()==="covered"?"Covered Tax":"Not Covered Tax"):"N/A");
-  fd.append("amount",c.amount); fd.append("receiveAmount",c.receive); fd.append("requiredPassPrice",c.pass); fd.append("payment",c.payment.toFixed(2));
-  fd.append("paymentMethod",selectedPayment()); fd.append("promoCode",appliedPromo?.code||""); fd.append("originalPayment",c.originalPayment.toFixed(2)); fd.append("discountAmount",c.discount.toFixed(2)); fd.append("senderName",sender); fd.append("referenceNumber",ref);
-  fd.append("gameName",gameName); fd.append("itemName",itemName); fd.append("giftDetails",giftDetails); fd.append("receipt",receipt);
+  <section class="panel">
+    <div class="promo-box">
+      <div class="form-group"><label for="promoCode">Promo Code</label><div class="search-row"><input id="promoCode" type="text" placeholder="Optional promo code"><button id="applyPromoButton" type="button">Apply</button></div><small id="promoMessage"></small></div>
+    </div>
+    <label class="confirm"><input id="confirmInformation" type="checkbox"> I confirm all details are correct.</label>
+    <button id="placeOrderButton" class="primary-button">Submit Order</button>
+    <p id="submitMessage" class="message"></p>
+  </section>
+</section>
 
-  const button=$("placeOrderButton"); button.disabled=true; button.textContent="Submitting...";
-  try{
-    const r=await fetch("/api/orders",{method:"POST",body:fd}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Submission failed.");
-    msg.className="message success";
-    msg.innerHTML=`Order submitted: <strong>${d.orderNumber}</strong><br><a href="${d.chatUrl}">Open private order chat and status</a>`;
-  }catch(e){showError(e.message)}
-  finally{button.disabled=false;button.textContent="Submit Order";}
-};
+<section id="recentTransactions" class="panel transactions-panel">
+  <div class="panel-heading">
+    <div><span class="small-label">MY ACCOUNT</span><h2>Recent Transactions</h2><p class="hint">Your newest purchases and current order status.</p></div>
+    <button id="refreshTransactions" class="secondary-button" type="button">Refresh</button>
+  </div>
+  <div id="transactionsList" class="transactions-list"><p class="hint">Loading transactions…</p></div>
+</section>
+<section class="panel how-panel"><div class="section-title"><span class="step-number">3</span><div><h2>How Your Order Progresses</h2><p>A clearer status timeline from submission to delivery.</p></div></div>
+<div class="public-timeline"><div><b>1</b><span>Submitted</span></div><div><b>2</b><span>Payment Review</span></div><div><b>3</b><span>Approved</span></div><div><b>4</b><span>Processing</span></div><div><b>5</b><span>Completed</span></div></div></section>
+<section class="marketplace-features">
+      <article><span>🔐</span><h3>Private Orders</h3><p>Every order has a secure private tracking and chat link.</p></article>
+      <article><span>⚡</span><h3>Reserved Stock</h3><p>Instant stock is reserved while your payment is being reviewed.</p></article>
+      <article><span>💬</span><h3>Admin Support</h3><p>Unread message alerts and private customer support.</p></article>
+      <article><span>🧾</span><h3>Permanent History</h3><p>Your transactions and receipts stay in your dashboard.</p></article>
+    </section>
+<section class="panel"><div class="panel-heading"><div><span class="small-label">VERIFIED PURCHASES</span><h2>Recent Customer Reviews</h2></div><div id="averageRating" class="rating-summary">New</div></div><div id="reviewsList" class="reviews-grid"></div></section>
+<section class="panel faq-panel"><span class="small-label">HELP CENTER</span><h2>Frequently Asked Questions</h2>
+<details><summary>How long does a Gamepass order take?</summary><p>Roblox gamepass proceeds can remain pending before delivery. Your order timeline and admin chat will show progress.</p></details>
+<details><summary>How does Instant stock work?</summary><p>Instant stock is reserved when your receipt is submitted. The reservation expires if the order cannot proceed in time.</p></details>
+<details><summary>How do I clarify a gifting order?</summary><p>Submit the exact game and item, then use your private order chat to confirm scheduling and requirements.</p></details>
+<details><summary>Where can I see unread replies?</summary><p>Your Dashboard shows unread message badges beside each order.</p></details></section>
+</main>
 
-function openHelp(){ $("helpModal").classList.remove("hidden"); }
-$("helpButton").onclick=openHelp; $("floatingHelp").onclick=openHelp;
-$("closeHelp").onclick=()=>$("helpModal").classList.add("hidden");
-$("openHelpChat").onclick=()=>{
-  const order=$("helpOrderNumber").value.trim();
-  if(!order) return alert("Enter your order number.");
-  location.href=`status.html?order=${encodeURIComponent(order)}`;
-};
-$("helpModal").addEventListener("click",e=>{if(e.target===$("helpModal"))$("helpModal").classList.add("hidden");});
-$("accountButton").onclick=e=>{e.stopPropagation();$("accountMenu").classList.toggle("hidden");};
-document.addEventListener("click",e=>{if(!$("accountMenu").contains(e.target)&&e.target!==$("accountButton"))$("accountMenu").classList.add("hidden");});
-$("logoutButton").onclick=async()=>{await fetch("/api/auth/logout",{method:"POST"});location.href="/auth.html";};
-$("refreshTransactions").onclick=loadTransactions;
-$("applyPromoButton").onclick=async()=>{
-  const code=$("promoCode").value.trim().toUpperCase();
-  if(!code){appliedPromo=null;$("promoMessage").textContent="";calc();return;}
-  const r=await fetch(`/api/promo/${encodeURIComponent(code)}`),d=await r.json();
-  if(!r.ok){appliedPromo=null;$("promoMessage").textContent=d.error||"Invalid promo code.";$("promoMessage").className="error";calc();return;}
-  appliedPromo=d;$("promoMessage").textContent=`${d.discountPercent}% discount applied.`;$("promoMessage").className="success";calc();
-};
-$("themeToggle").onclick=()=>{
-  const next=document.documentElement.dataset.theme==="light"?"dark":"light";
-  document.documentElement.dataset.theme=next;
-  localStorage.setItem("rsr-theme",next);
-};
-document.documentElement.dataset.theme=localStorage.getItem("rsr-theme")||"dark";
+<div id="accountMenu" class="account-menu hidden">
+  <div><strong id="menuName">Customer</strong><small id="menuEmail"></small></div>
+  <a href="#recentTransactions">Recent Transactions</a>
+  <button id="logoutButton" type="button">Logout</button>
+</div>
 
-requireAccount().then(()=>loadPublicSettings()).finally(()=>{refreshMethod(); refreshTax(); refreshPayment(); calc();});
+<button id="floatingHelp" class="floating-help">💬 Help</button>
+<div id="helpModal" class="modal hidden"><div class="modal-card"><button id="closeHelp" class="close-button">×</button><h2>Contact Help</h2><p>Already placed an order? Enter your order number to open the private support chat.</p><input id="helpOrderNumber" placeholder="RSR-YYYYMMDD-0000"><button id="openHelpChat" class="primary-button">Open Support Chat</button><p class="hint">For gifting orders, use the order chat to clarify the exact game, item, schedule, and requirements.</p></div></div>
+
+<script src="script.js"></script>
+</body>
+</html>
